@@ -1,0 +1,162 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------
+   Design tokens. Light is the default. [data-theme="dark"] on
+   <html> (toggled by ThemeToggle.tsx) overrides the same variable
+   names, so every utility below stays correct in both modes.
+   "surface-dark" tokens are NOT theme-dependent — they're the
+   permanently-dark chrome used for product/terminal UI (the demo
+   panel, diff viewer, dashboard previews), the same way a real
+   code editor stays dark on an otherwise light marketing page.
+------------------------------------------------------------------ */
+:root {
+  --bg: #f6f7f9;
+  --bg-elevated: #ffffff;
+  --ink: #0e1116;
+  --ink-soft: #4b5565;
+  --ink-faint: #8a93a3;
+  --border: #e4e7ec;
+  --border-soft: #edeff3;
+
+  --accent: #4f46e5;
+  --accent-cyan: #06b6d4;
+  --ring: rgba(79, 70, 229, 0.35);
+
+  --surface-dark: #10131a;
+  --surface-dark-2: #161a23;
+  --surface-dark-border: rgba(255, 255, 255, 0.08);
+  --surface-dark-ink: #e7eaf0;
+  --surface-dark-ink-soft: #8890a0;
+
+  --diff-add: #059669;
+  --diff-add-bg: rgba(16, 185, 129, 0.12);
+  --diff-del: #e11d48;
+  --diff-del-bg: rgba(244, 63, 94, 0.12);
+
+  --logo: #3f3f46;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="dark"] {
+  --bg: #0b0d12;
+  --bg-elevated: #12151c;
+  --ink: #f3f5f7;
+  --ink-soft: #a7b0c0;
+  --ink-faint: #6b7383;
+  --border: #232733;
+  --border-soft: #1a1e27;
+  --ring: rgba(99, 102, 241, 0.45);
+  --logo: #d4d4d8;
+}
+
+/* Register the runtime variables as Tailwind utilities (bg-bg, text-ink, border-border, ...) */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
+  --color-accent: var(--accent);
+  --color-accent-cyan: var(--accent-cyan);
+  --color-ring: var(--ring);
+
+  --color-surface-dark: var(--surface-dark);
+  --color-surface-dark-2: var(--surface-dark-2);
+  --color-surface-dark-border: var(--surface-dark-border);
+  --color-surface-dark-ink: var(--surface-dark-ink);
+  --color-surface-dark-ink-soft: var(--surface-dark-ink-soft);
+
+  --color-diff-add: var(--diff-add);
+  --color-diff-add-bg: var(--diff-add-bg);
+  --color-diff-del: var(--diff-del);
+  --color-diff-del-bg: var(--diff-del-bg);
+
+
+  /* Dashboard tokens, driven at runtime by DashboardThemeRoot (see dashboardTheme.tsx) */
+  --color-da-bg: var(--da-bg);
+  --color-da-s1: var(--da-s1);
+  --color-da-s2: var(--da-s2);
+  --color-da-s3: var(--da-s3);
+  --color-da-ink: var(--da-z100);
+  --color-da-soft: var(--da-z400);
+  --color-da-faint: var(--da-z500);
+  --color-da-line: var(--da-z800);
+  --color-da-line-2: var(--da-z700);
+  --color-da-hi: var(--da-hi);
+  --color-da-on: var(--da-on);
+  --color-da-a1: var(--da-a1);
+  --color-da-a2: var(--da-a2);
+  --color-da-accent: var(--da-at);
+
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-inter-tight);
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--bg);
+  /* Site-wide size. Tailwind sizes are rem-based, so this one value makes every section bigger and
+     roomier. The dashboard overrides it from Settings > Appearance > Interface size. */
+  font-size: 108%;
+}
+@media (min-width: 1024px) {
+  html { font-size: 112.5%; }
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.35s var(--ease-out-expo), color 0.35s var(--ease-out-expo);
+}
+button:not(:disabled),
+[role="button"] {
+  cursor: pointer;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Bottom fade used on dashboard preview cards — content dissolves into the page background */
+.fade-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, black 58%, transparent 96%);
+  mask-image: linear-gradient(to bottom, black 58%, transparent 96%);
+}
+
+/* Infinite marquee for the screenshot loop. The track renders its
+   children twice; animating to -50% therefore loops seamlessly. */
+@keyframes marquee-x {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee-x linear infinite;
+}
+.marquee-pause:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+/* Slow orbit rotation used by the integrations hub. Children of an
+   orbiting ring counter-rotate at the same speed so icons stay upright. */
+@keyframes orbit-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes orbit-spin-reverse {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

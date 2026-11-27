@@ -1,0 +1,13 @@
+# Dependencies
+/node_modules
+
+# Next.js build output & generated types
+/.next/
+/out/
+next-env.d.ts
+
+# Local environment variables (CRITICAL: contains API keys/secrets)
+.env*
+
+# Local AI / Claude agent folders & MCP configs (optional, see below)
+.claude-local/

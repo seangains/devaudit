@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>DevAudit preview</title>
+<!--
+  The page DevAudit's Preview and Run sandbox load, either in an iframe or (for the "Full page" button)
+  as a tab of its own. It is static on purpose:
+  - Next.js never touches it, so no dev-only tooling (and no dev-only 'unsafe-eval') is ever mixed in,
+    and it behaves the same under `next dev` and `next start`.
+  - next.config.mjs serves it with its own Content-Security-Policy (looser than the app's, because a
+    previewed website needs images, fonts, scripts and APIs from elsewhere) plus a `sandbox` directive,
+    so it has an opaque origin even as a top-level tab. It never has access to the app's cookies,
+    localStorage or Supabase session.
+  It does one thing: wait for the document to show from the DevAudit page that opened it, then become
+  that document.
+-->
+<style>
+  html, body { margin: 0; height: 100%; background: #fff; color: #71717a; font: 13px/1.5 system-ui, sans-serif; }
+  body { display: grid; place-items: center; padding: 24px; text-align: center; }
+</style>
+</head>
+<body>
+<script>
+(function () {
+  "use strict";
+
+  // A one-time token the opening page put in this URL; messages without it are ignored.
+  var nonce = new URLSearchParams(location.search).get("n") || "";
+  // Inside DevAudit's iframe, or opened as a tab of its own.
+  var framed = window.parent !== window;
+  var selfOrigin = "";
+  try { selfOrigin = new URL(location.href).origin; } catch (err) {}
+  var waiting = true;
+
+  if (!framed) {
+    document.body.textContent = "Connecting to DevAudit…";
+    setTimeout(function () {
+      if (waiting && document.body) {
+        document.body.textContent = "This tab isn't connected to DevAudit. Go back to DevAudit and use \u201cFull page\u201d in the preview.";
+      }
+    }, 8000);
+  }
+
+  // Who may send this page its document.
+  //  - In an iframe: only the page that framed it (and next.config.mjs lets only DevAudit frame it).
+  //  - As a tab: only a window on THIS page's own origin, i.e. DevAudit itself. Without this check, any
+  //    website could open this URL and show its own content under DevAudit's address.
+  function trusted(e) {
+    return framed ? e.source === window.parent : e.origin === selfOrigin && !!e.source;
+  }
+  function reply(target, message, origin) {
+    try { target.postMessage(message, origin); } catch (err) {}
+  }
+
+  function onMessage(e) {
+    var d = e.data;
+    if (!d || typeof d !== "object" || !nonce || d.nonce !== nonce || !trusted(e)) return;
+    // postMessage to an opaque-origin frame can't name its origin; a tab's reply is addressed to DevAudit's origin.
+    var origin = framed ? "*" : e.origin;
+
+    if (d.__devaudit_frame === "ping") {
+      reply(e.source, { __devaudit_frame: "need-doc", nonce: nonce }, origin);
+      return;
+    }
+    if (d.__devaudit_frame !== "doc" || typeof d.html !== "string") return;
+
+    // Accept exactly one document: after this the page is the project's, and nothing here can replace it.
+    window.removeEventListener("message", onMessage);
+    waiting = false;
+
+    if (!framed) {
+      // The project gets a way to report errors and ask for other pages of the site, but not DevAudit's
+      // window itself: this one function can only post a message to DevAudit's origin, and the tab's
+      // link to the window that opened it is cut.
+      var host = e.source, hostOrigin = e.origin;
+      try {
+        Object.defineProperty(window, "__devaudit_send", {
+          value: function (message) { try { host.postMessage(message, hostOrigin); } catch (err) {} }
+        });
+      } catch (err) {}
+      try { window.opener = null; } catch (err) {}
+    }
+
+    document.open();
+    document.write(d.html);
+    document.close();
+    reply(e.source, { __devaudit_frame: "ack", nonce: nonce }, origin);
+  }
+
+  window.addEventListener("message", onMessage);
+
+  // In an iframe, ask the parent for the document (this also covers a reload of the frame). A tab is
+  // pinged by DevAudit until it answers, so it has nothing to ask.
+  if (framed) reply(window.parent, { __devaudit_frame: "need-doc", nonce: nonce }, "*");
+})();
+</script>
+</body>
+</html>
